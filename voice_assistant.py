@@ -38,7 +38,7 @@ PIPER_BINARY = "piper"
 PIPER_VOICE_MODEL = "en_US-lessac-medium.onnx"
 
 SAMPLE_RATE = 16000        # required by both webrtcvad and whisper
-MIC_DEVICE_INDEX = 1       # from `python -c "import sounddevice as sd; print(sd.query_devices())"`
+MIC_DEVICE_INDEX = 0       # from `python -c "import sounddevice as sd; print(sd.query_devices())"`
 MIC_NATIVE_SAMPLE_RATE = None  # set automatically at startup based on the mic's actual capabilities
 FRAME_MS = 30              # webrtcvad requires 10, 20, or 30 ms frames
 VAD_AGGRESSIVENESS = 2     # 0 (least aggressive) to 3 (most aggressive) filtering of non-speech
