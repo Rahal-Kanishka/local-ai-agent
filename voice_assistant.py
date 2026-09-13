@@ -92,7 +92,7 @@ def speak(text: str):
         stdout=subprocess.PIPE,
     )
     aplay_proc = subprocess.Popen(
-        ["aplay", "-D", "default", "-r", "22050", "-f", "S16_LE", "-t", "raw", "-"],
+        ["paplay", "--raw", "--rate=22050", "--format=s16le", "--channels=1"],
         stdin=piper_proc.stdout,
     )
     piper_proc.stdin.write(text.encode("utf-8"))
