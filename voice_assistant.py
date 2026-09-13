@@ -232,7 +232,7 @@ def main():
     vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
 
     print("[voice_assistant] Ready. Speak whenever you like. (Ctrl+C to stop)")
-    send_mood_to_roboeyes("DEFAULT")
+    send_mood_to_roboeyes("LISTENING")  # initial "listening" face
 
     while True:
         audio_bytes = record_phrase(vad, mic_device_index)
