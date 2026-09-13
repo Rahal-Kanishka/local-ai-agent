@@ -64,6 +64,8 @@ def get_device_temp() -> str:
     return f"Device Temperature: {celsius:.1f}°C"
 
 def process_message(user_text: str):
+    start = time.time()
+
     print('Processing message: ', user_text)
     """
     Call the Ollama model with the user text and handle any tool calls.
@@ -178,7 +180,10 @@ def process_message(user_text: str):
             # when there is no tool call, just return the message
             print(message["content"])
     print('returning: ', message)
-    return {"reply": message["content"], "emotion": mood}
+    end = time.time()
+    print("Time taken: ", end - start)
+
+    return {"reply": message["content"], "emotion": mood, "tool_results": tool_results, "time_taken": end - start}
 
 
 
