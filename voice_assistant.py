@@ -38,6 +38,8 @@ PIPER_BINARY = "piper"
 PIPER_VOICE_MODEL = "en_US-lessac-medium.onnx"
 
 SAMPLE_RATE = 16000        # required by both webrtcvad and whisper
+MIC_DEVICE_INDEX = 1       # from `python -c "import sounddevice as sd; print(sd.query_devices())"`
+MIC_NATIVE_SAMPLE_RATE = None  # set automatically at startup based on the mic's actual capabilities
 FRAME_MS = 30              # webrtcvad requires 10, 20, or 30 ms frames
 VAD_AGGRESSIVENESS = 2     # 0 (least aggressive) to 3 (most aggressive) filtering of non-speech
 SILENCE_FRAMES_TO_STOP = 20  # ~600ms of silence (20 * 30ms) ends a phrase
@@ -107,29 +109,58 @@ def ask_llm(user_text: str):
         return "Sorry, I couldn't reach the assistant right now.", None
 
 
+def resample_to_16k(audio_int16: np.ndarray, orig_rate: int) -> np.ndarray:
+    """
+    Simple linear-interpolation resampler from the mic's native rate down
+    to 16000 Hz, which webrtcvad and Whisper both require.
+    """
+    if orig_rate == SAMPLE_RATE:
+        return audio_int16
+    duration = len(audio_int16) / orig_rate
+    target_length = int(duration * SAMPLE_RATE)
+    orig_indices = np.linspace(0, len(audio_int16) - 1, num=len(audio_int16))
+    target_indices = np.linspace(0, len(audio_int16) - 1, num=target_length)
+    resampled = np.interp(target_indices, orig_indices, audio_int16).astype(np.int16)
+    return resampled
+
+
 def record_phrase(vad: webrtcvad.Vad) -> bytes:
     """
     Records audio from the mic until a pause in speech is detected.
-    Returns raw int16 PCM bytes of just the spoken phrase.
+    Recording happens at the mic's native sample rate, then everything
+    is resampled to 16000 Hz (required by webrtcvad and Whisper) before
+    voice-activity detection and returning.
     """
-    frame_length = int(SAMPLE_RATE * FRAME_MS / 1000)  # samples per frame
-    ring_buffer = collections.deque(maxlen=SILENCE_FRAMES_TO_STOP)
+    native_rate = MIC_NATIVE_SAMPLE_RATE
+    frame_length_native = int(native_rate * FRAME_MS / 1000)
 
+    ring_buffer = collections.deque(maxlen=SILENCE_FRAMES_TO_STOP)
     voiced_frames = []
     triggered = False
     silence_count = 0
     speech_count = 0
 
     with sd.RawInputStream(
-        samplerate=SAMPLE_RATE,
-        blocksize=frame_length,
+        samplerate=native_rate,
+        blocksize=frame_length_native,
         dtype="int16",
         channels=1,
+        device=MIC_DEVICE_INDEX,
     ) as stream:
         print("[voice_assistant] Listening for speech...")
         while True:
-            frame, _ = stream.read(frame_length)
-            frame_bytes = bytes(frame)
+            frame, _ = stream.read(frame_length_native)
+            frame_np = np.frombuffer(bytes(frame), dtype=np.int16)
+            frame_16k = resample_to_16k(frame_np, native_rate)
+
+            # webrtcvad needs exactly 10/20/30ms of 16kHz audio - pad/trim just in case
+            expected_len = int(SAMPLE_RATE * FRAME_MS / 1000)
+            if len(frame_16k) < expected_len:
+                frame_16k = np.pad(frame_16k, (0, expected_len - len(frame_16k)))
+            elif len(frame_16k) > expected_len:
+                frame_16k = frame_16k[:expected_len]
+
+            frame_bytes = frame_16k.tobytes()
             is_speech = vad.is_speech(frame_bytes, SAMPLE_RATE)
 
             if not triggered:
@@ -168,8 +199,15 @@ def transcribe(model: WhisperModel, audio_bytes: bytes) -> str:
 
 
 def main():
+    global MIC_NATIVE_SAMPLE_RATE
+
     print("[voice_assistant] Loading faster-whisper model...")
     model = WhisperModel(WHISPER_MODEL_SIZE, device="cpu", compute_type=WHISPER_COMPUTE_TYPE)
+
+    device_info = sd.query_devices(MIC_DEVICE_INDEX)
+    MIC_NATIVE_SAMPLE_RATE = int(device_info["default_samplerate"])
+    print(f"[voice_assistant] Using mic device {MIC_DEVICE_INDEX} ({device_info['name']}) "
+          f"at native rate {MIC_NATIVE_SAMPLE_RATE} Hz, resampling to {SAMPLE_RATE} Hz")
 
     vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
 
