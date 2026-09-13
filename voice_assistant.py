@@ -78,8 +78,8 @@ def send_mood_to_roboeyes(mood: str):
 
 def map_emotion_to_roboeyes_mood(emotion: str) -> str:
     if not emotion:
-        return "ANGRY"
-    return EMOTION_TO_ROBOEYES.get(emotion.strip().lower(), "ANGRY")
+        return "DEFAULT"
+    return EMOTION_TO_ROBOEYES.get(emotion.strip().lower(), "DEFAULT")
 
 
 def speak(text: str):
@@ -106,7 +106,7 @@ def ask_llm(user_text: str):
         return data.get("reply", "Sorry, I didn't get a reply."), data.get("emotion")
     except requests.exceptions.RequestException as e:
         print(f"[voice_assistant] Error reaching LLM server: {e}")
-        return "Sorry, I couldn't reach the assistant right now.", None
+        return "Sorry, I couldn't reach the assistant right now.", "SAD"
 
 
 def find_mic_device(name_hint: str) -> int:
