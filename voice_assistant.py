@@ -102,10 +102,30 @@ def speak(text: str):
 
 def ask_llm(user_text: str):
     try:
-        response = requests.post(LLM_SERVER_URL, json={"text": user_text}, timeout=30)
-        response.raise_for_status()
+        response = requests.post(LLM_SERVER_URL, json={"text": user_text}, timeout=120)
+        
         data = response.json()
-        return data.get("reply", "Sorry, I didn't get a reply."), data.get("emotion")
+
+                if response.status_code == 200:
+            data = response.json()
+            return data.get("reply", "Sorry, I didn't get a reply."), data.get("emotion")
+ 
+        # Log the raw error body for debugging regardless of which case below fires
+        print(f"[voice_assistant] LLM server returned {response.status_code}: {response.text}")
+ 
+        if response.status_code == 400:
+            return "I didn't quite catch that, could you try again?", "confused"
+        elif response.status_code == 404:
+            return "The assistant service isn't set up right on the other end.", "sad"
+        elif response.status_code == 500:
+            return "Something went wrong on the assistant's end. Let me know if it keeps happening.", "sad"
+        elif response.status_code == 503:
+            return "The assistant is busy right now, give it a moment.", "tired"
+        else:
+            return f"Got an unexpected error ({response.status_code}) from the assistant.", "sad"
+    except requests.exceptions.Timeout:
+        print("[voice_assistant] LLM server request timed out.")
+        return "LLM server request timed out", "tired"
     except requests.exceptions.RequestException as e:
         print(f"[voice_assistant] Error reaching LLM server: {e}")
         return "Sorry, I couldn't reach the assistant right now.", "SAD"
