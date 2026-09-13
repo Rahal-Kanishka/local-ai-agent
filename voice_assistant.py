@@ -106,7 +106,7 @@ def ask_llm(user_text: str):
         
         data = response.json()
 
-                if response.status_code == 200:
+        if response.status_code == 200:
             data = response.json()
             return data.get("reply", "Sorry, I didn't get a reply."), data.get("emotion")
  
