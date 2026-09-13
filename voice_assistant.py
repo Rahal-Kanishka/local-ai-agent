@@ -64,6 +64,8 @@ EMOTION_TO_ROBOEYES = {
     "calm": "DEFAULT",
     "laughing": "LAUGH",
     "amused": "LAUGH",
+    "sad": "SAD",
+    "listening": "LISTENING"
 }
 
 
