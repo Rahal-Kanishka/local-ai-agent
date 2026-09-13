@@ -1,10 +1,18 @@
 import ollama
 import sys
+import time
 
-print("Question: ", sys.argv[1])
-question = sys.argv[1]
+# start = time.time()
+# print("Question: ", sys.argv[1])
+# question = sys.argv[1]
 
 import requests
+
+# model = "llama3.2:3b"
+model = "qwen2.5:7b"
+# model= "gemma3:4b"
+# model = "qwen3:4b"
+
 
 def get_weather(city: str) -> str:
     print('Get weather called: ', city)
@@ -55,85 +63,127 @@ def get_device_temp() -> str:
     celsius = intvalue / 1000
     return f"Device Temperature: {celsius:.1f}°C"
 
-tools = [{
-    "type": "function",
-    "function": {
-        "name": "get_weather",
-        "description": "Get current weather for a city",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "city": {"type": "string", "description": "City name"}
-            },
-            "required": ["city"]
+def process_message(user_text: str):
+    print('Processing message: ', user_text)
+    """
+    Call the Ollama model with the user text and handle any tool calls.
+
+    Must return a tuple: (reply_text, emotion)
+
+    `emotion` should come from whatever tool call your model makes to
+    decide the emotional tone of its response, e.g. "happy", "confused",
+    "angry", "tired", "neutral". Return None if no emotion was determined.
+    """
+    tools = [{
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a city",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {"type": "string", "description": "City name"}
+                },
+                "required": ["city"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_device_temperature",
+            "description": "Get current Temperture of the device",
+            "parameters": {
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_response_mood",
+            "description": "Get the mood of the response",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "mood": {"type": "string", "description": "Pick the mood of the final response from the model, e.g. happy, confused, angry, tired, neutral, laugh, sad, excited, frustrated, calm, anxious, surprised, bored, content, disappointed, hopeful, proud, relaxed, stressed, thoughtful"}
+                },
+                "required": []
+            }
         }
     }
-},
-{
-    "type": "function",
-    "function": {
-        "name": "get_device_temperature",
-        "description": "Get current Temperture of the device",
-        "parameters": {
-        }
-    }
-}]
+    ]
 
-messages = [
-    {"role": "system", "content": "You have tools available. If answering the "
-     "question requires information you don't already have (like current weather "
-     "or device temperature), call the relevant tool(s) instead of guessing or "
-     "speaking generally. Call as many tools as needed before answering."},
-    {"role": "user", "content": question}
-]
+    messages = [
+        {"role": "system", "content": "You have tools available. If answering the "
+        "question requires information you don't already have (like current weather "
+        "or device temperature), call the relevant tool(s) instead of guessing or "
+        "speaking generally. Call as many tools as needed before answering."
+        "When comparing tool results, do not claim one caused "
+        "another unless the data directly supports it"},
+        {"role": "user", "content": user_text}
+    ]
 
-print('AI is thinking...')
+    print('AI is thinking...')
 
-response = ollama.chat(
-    model="llama3.1:8b",
-    messages=messages,
-    tools=tools
-)
+    response = ollama.chat(
+        model=model,
+        messages=messages,
+        tools=tools
+    )
 
-message = response["message"]
-print('AI Response: ', response)
-MAX_TRIES = 5
-while message.get("tool_calls") and MAX_TRIES > 0:
-    if message.get("tool_calls"):
-        tool_results = []
-        for call in message["tool_calls"]:
-            if call["function"]["name"] == "get_weather":
-                args = call["function"]["arguments"]
-                result = get_weather(**args)
-            elif call["function"]["name"] == "get_device_temperature":
-                args = call["function"]["arguments"]
-                result = get_device_temp()
+    message = response["message"]
+    print('AI Response: ', response)
+    MAX_TRIES = 5
+    while message.get("tool_calls") and MAX_TRIES > 0:
+        if message.get("tool_calls"):
+            tool_results = []
+            mood = ''
+            for call in message["tool_calls"]:
+                if call["function"]["name"] == "get_weather":
+                    args = call["function"]["arguments"]
+                    result = get_weather(**args)
+                elif call["function"]["name"] == "get_device_temperature":
+                    args = call["function"]["arguments"]
+                    result = get_device_temp()
+                elif call["function"]["name"] == "get_response_mood":
+                    args = call["function"]["arguments"]
+                    mood = args.get("mood")
+                else:
+                    tool = call["function"]["name"]
+                    result = f"Unknown Tool {tool}"
+                print("Tool result:", result, ', mood: ', mood)
+                tool_results.append(result)
+                    
+            # feed results back to model for final answer
+            print("AI is processing the results ..., tool_results: ", ", ".join(tool_results))
+            followup = ollama.chat(
+                model=model,
+                messages=[
+                    {"role": "user", "content": user_text},
+                    message,
+                    {"role": "tool", "content": ", ".join(tool_results)}
+                ]
+            )
+            print('after processing: ', followup["message"]["content"])
+            message = followup["message"]
+            print('AI Response for tools: ', followup["message"].get("tool_calls"))
+
+            # check if the model is calling tools again, if so, loop again
+            if followup["message"].get("tool_calls") and MAX_TRIES > 0:
+                print("AI is recalling tools ...", followup)
+                MAX_TRIES -= 1
             else:
-                tool = call["function"]["name"]
-                result = f"Unknown Tool {tool}"
-            print("Tool result:", result)
-            tool_results.append(result)
-                
-        # feed results back to model for final answer
-        print("AI is processing the results ...")
-        followup = ollama.chat(
-            model="llama3.1:8b",
-            messages=[
-                {"role": "user", "content": question},
-                message,
-                {"role": "tool", "content": ", ".join(tool_results)}
-            ]
-        )
-        print(followup["message"]["content"])
-        message = followup["message"]
-        print('AI Response for tools: ', followup["message"].get("tool_calls"))
-
-        # check if the model is calling tools again, if so, loop again
-        if followup["message"].get("tool_calls") and MAX_TRIES > 0:
-            print("AI is recalling tools ...", followup)
-            MAX_TRIES -= 1
+                break
         else:
-            break
-    else:
-        print(message["content"])
+            # when there is no tool call, just return the message
+            print(message["content"])
+    print('returning: ', message)
+    return {"reply": message["content"], "emotion": mood}
 
+
+
+
+# processed = process_message(question)
+# end = time.time()
+# print("Time taken: ", end - start)
+# print("Final Answer: ", processed)
