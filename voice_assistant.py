@@ -232,11 +232,11 @@ def main():
     vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
 
     print("[voice_assistant] Ready. Speak whenever you like. (Ctrl+C to stop)")
-    send_mood_to_roboeyes("LISTENING")  # initial "listening" face
+    send_mood_to_roboeyes("DEFAULT")  # initial "listening" face
 
     while True:
         audio_bytes = record_phrase(vad, mic_device_index)
-
+        send_mood_to_roboeyes("LISTENING")  # keep "listening" face
         print("[voice_assistant] Transcribing...")
         text = transcribe(model, audio_bytes)
 
