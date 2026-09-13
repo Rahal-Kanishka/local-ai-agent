@@ -225,6 +225,8 @@ def main():
             continue
 
         print(f"[voice_assistant] Heard: {text}")
+        speak(f"You said: {text}")  # echoes back what it transcribed, for confirmation
+
         send_mood_to_roboeyes("CONFUSED")  # "thinking" face while waiting
 
         reply, emotion = ask_llm(text)
