@@ -41,7 +41,7 @@ SAMPLE_RATE = 16000        # required by both webrtcvad and whisper
 MIC_NAME_HINT = "USB PnP Sound Device"  # substring to search for among input devices
 MIC_NATIVE_SAMPLE_RATE = None  # set automatically at startup based on the mic's actual capabilities
 FRAME_MS = 30              # webrtcvad requires 10, 20, or 30 ms frames
-VAD_AGGRESSIVENESS = 2     # 0 (least aggressive) to 3 (most aggressive) filtering of non-speech
+VAD_AGGRESSIVENESS = 3     # 0 (least aggressive) to 3 (most aggressive) filtering of non-speech
 SILENCE_FRAMES_TO_STOP = 20  # ~600ms of silence (20 * 30ms) ends a phrase
 MIN_SPEECH_FRAMES = 5       # ignore very short blips/noise
 
