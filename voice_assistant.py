@@ -29,7 +29,7 @@ import requests
 import sounddevice as sd
 import webrtcvad
 from faster_whisper import WhisperModel
-from playsound import playsound
+from playsound3 import playsound
 
 
 # --- CONFIGURATION - EDIT THESE ---
