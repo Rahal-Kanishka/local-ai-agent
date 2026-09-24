@@ -260,6 +260,7 @@ def main():
         audio_bytes = record_phrase(vad, mic_device_index)
         send_mood_to_roboeyes("LISTENING")  # keep "listening" face
         print("[voice_assistant] Transcribing...")
+        playsound('sounds/assistant_done.mp3')
         text = transcribe(model, audio_bytes)
 
         if not text:
@@ -268,13 +269,12 @@ def main():
             continue
 
         print(f"[voice_assistant] Heard: {text}")
-        playsound('sounds/assistant_done.mp3')
         speak(f"You said: {text}")  # echoes back what it transcribed, for confirmation
 
         send_mood_to_roboeyes("DEFAULT")  # "thinking" face while waiting
 
         reply, emotion = ask_llm(text)
-
+        playsound('sounds/assistant_success.mp3')
         mood = map_emotion_to_roboeyes_mood(emotion)
         print(f"[voice_assistant] LLM emotion: {emotion} -> RoboEyes mood: {mood}")
         send_mood_to_roboeyes(mood)
