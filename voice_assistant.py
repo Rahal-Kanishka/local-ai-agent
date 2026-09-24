@@ -268,7 +268,7 @@ def main():
             continue
 
         print(f"[voice_assistant] Heard: {text}")
-        playsound('sounds/assitant_done.mp3')
+        playsound('sounds/assistant_done.mp3')
         speak(f"You said: {text}")  # echoes back what it transcribed, for confirmation
 
         send_mood_to_roboeyes("DEFAULT")  # "thinking" face while waiting
