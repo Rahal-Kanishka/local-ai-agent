@@ -29,6 +29,8 @@ import requests
 import sounddevice as sd
 import webrtcvad
 from faster_whisper import WhisperModel
+from playsound import playsound
+
 
 # --- CONFIGURATION - EDIT THESE ---
 WHISPER_MODEL_SIZE = "small"                        # "tiny" or "base" recommended for Pi 5 real-time use
@@ -262,9 +264,11 @@ def main():
 
         if not text:
             print("[voice_assistant] (No speech recognized, listening again)")
+            playsound('sounds/error-sound-effect-35894.mp3')
             continue
 
         print(f"[voice_assistant] Heard: {text}")
+        playsound('sounds/assitant_done.mp3')
         speak(f"You said: {text}")  # echoes back what it transcribed, for confirmation
 
         send_mood_to_roboeyes("DEFAULT")  # "thinking" face while waiting
