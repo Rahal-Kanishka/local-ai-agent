@@ -272,7 +272,7 @@ def main():
         speak(f"You said: {text}")  # echoes back what it transcribed, for confirmation
 
         send_mood_to_roboeyes("DEFAULT")  # "thinking" face while waiting
-
+        playsound('sounds/assistant_thinking.mp3')
         reply, emotion = ask_llm(text)
         playsound('sounds/assistant_success.mp3')
         mood = map_emotion_to_roboeyes_mood(emotion)
