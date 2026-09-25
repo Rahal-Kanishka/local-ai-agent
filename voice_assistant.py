@@ -33,7 +33,7 @@ from playsound3 import playsound
 
 
 # --- CONFIGURATION - EDIT THESE ---
-WHISPER_MODEL_SIZE = "small"                        # "tiny" or "base" recommended for Pi 5 real-time use
+WHISPER_MODEL_SIZE = "turbo"                        # "tiny" or "base" recommended for Pi 5 real-time use
 WHISPER_COMPUTE_TYPE = "int8"                      # int8 is fastest on CPU-only ARM (Pi 5 has no usable GPU path)
 LLM_SERVER_URL = "http://192.168.1.195:5000/chat"  # replace with your LLM device's actual IP
 PIPER_BINARY = "piper"
