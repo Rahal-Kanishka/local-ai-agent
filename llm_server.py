@@ -14,7 +14,7 @@ If your script currently looks like:
 """
 
 from flask import Flask, request, jsonify
-from first_agent import process_message  # Import your existing script's logic
+from first_agent import process_message  # import the first agent
 
 app = Flask(__name__)
 
@@ -46,22 +46,29 @@ def get_response_from_model(user_text: str):
     # If your tool-calling setup returns emotion as part of a larger
     # structured response (e.g. a dict), just pull it out here, e.g.:
     #
-    #   result = process_message(user_text)
-    #   return result["reply"], result.get("emotion")
+    print(f"[llm_server] Processing message: {user_text}")
+    result = ''
+    try:
+        result = process_message(user_text)
+        print(f"[llm_server] Model reply: {result['reply']}, emotion: {result.get('emotion')}") 
+    except Exception as e:
+        print(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
 
-    response = process_message(user_text)
+    
+    return result["reply"], result.get("emotion")
 
-    return f"response: {response['reply']}", response.get("emotion", "neutral")
+    # return f"You said: {user_text}", "neutral"
 
 
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json(silent=True) or {}
     user_text = data.get("text", "").strip()
-    print('Received user data: ', data)
 
     if not user_text:
         return jsonify({"error": "No 'text' field provided"}), 400
+    
+    print(f"[llm_server] Received user text: {user_text}")
 
     try:
         reply, emotion = get_response_from_model(user_text)
